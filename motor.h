@@ -7,9 +7,9 @@
 #include "uart.h"
 #include "defines.h"
 
-#define TimerPeriod  ((16000000/500) + 75)
+#define TimerPeriod  64075
 
-uint16_t constrain(uint16_t ,uint16_t ,uint16_t );
+double constrain(uint16_t ,uint16_t ,uint16_t );
 
 void motor_update(void);
 

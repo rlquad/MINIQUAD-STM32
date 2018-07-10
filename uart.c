@@ -12,7 +12,7 @@ void OutString(char *s)
   }
 }
 
-void print_ang(int choice,int dt)
+void print_ang(int choice,double a1,double a2)
 {
     char dummy[100];
 
@@ -25,7 +25,8 @@ void print_ang(int choice,int dt)
         sprintf(dummy,"ARM %d THROTTLE %d PITCH %d ROLL %d YAW %d CHANNEL 6 %d \r\n",rcvalue[ARM],rcvalue[THROTTLE],rcvalue[PITCH],rcvalue[ROLL_R],rcvalue[YAW_R],rcvalue[CHN_6]);
 
     else
-        sprintf(dummy,"%d \r\n",dt);
+        //sprintf(dummy,"%f \r\n",roll);
+        sprintf(dummy,"%f,%f \r\n",a1,a2);
 
     OutString(dummy);
 

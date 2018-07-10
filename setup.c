@@ -7,6 +7,8 @@
     SystemCoreClockUpdate();
 
     periph_clock_init();
+    led_init();
+    led_on();
     uart_init();
     tim_init();
     i2c_config();
@@ -20,6 +22,7 @@ static void periph_clock_init()
 
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA,ENABLE);
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB,ENABLE);
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOF,ENABLE);
 
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2,ENABLE);
 
@@ -61,19 +64,15 @@ static void uart_init()
 
   USART_Init(USART2, &usart2);
 
+ // USART2->CR2 = 0x20000010;      //http://www.openstm32.org/forumthread3101
+
+  USART_ITConfig(USART2,USART_IT_IDLE,ENABLE);
+  USART_ITConfig(USART2,USART_IT_RXNE,ENABLE);
+  USART_DMACmd(USART2, USART_DMAReq_Rx, ENABLE);
   USART_Cmd(USART2, ENABLE);
 
 }
 
-//////////////////////////////////////////////////////////////////////////
-//MOTOR CHANNEL MAPPING
-// MOTOR      TIMER    TIMER-CHANNEL   PIN   PORT
-// 1            3           1
-// 2            3           2           D3    PB0
-// 3            3           3           A5    PA6
-// 4            3           4           D6    PB1
-
-/////////////////////////////////////////////////////////////////////////
 
 static void tim_init()
 {
@@ -106,6 +105,27 @@ static void tim_init()
 //TIMER 3 SETUP
 //////////////////////////////////////////////////////////////////////////
 
+//http://www.micromouseonline.com/2016/02/06/pwm-basics-on-the-stm32-general-purpose-timers/
+
+    gpio_init.GPIO_Pin   = GPIO_Pin_4;
+    gpio_init.GPIO_Mode  = GPIO_Mode_OUT;
+    gpio_init.GPIO_Speed = GPIO_Speed_Level_3;
+    gpio_init.GPIO_OType = GPIO_OType_PP;
+    gpio_init.GPIO_PuPd  = GPIO_PuPd_DOWN;
+
+    GPIO_PinAFConfig(GPIOA, GPIO_PinSource4, GPIO_AF_2);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource4, GPIO_AF_2);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource0, GPIO_AF_2);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource1, GPIO_AF_2);
+
+     GPIO_Init(GPIOA, &gpio_init);
+
+    gpio_init.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_4;
+
+    GPIO_Init(GPIOB, &gpio_init);
+
+
+
     gpio_init.GPIO_Pin   = GPIO_Pin_4;
     gpio_init.GPIO_Mode  = GPIO_Mode_AF;
     gpio_init.GPIO_Speed = GPIO_Speed_Level_3;
@@ -125,13 +145,13 @@ static void tim_init()
 
     setuptimer.TIM_Prescaler = 0;                                                    //DONT KNOW WHY
     setuptimer.TIM_CounterMode = TIM_CounterMode_Up;
-    setuptimer.TIM_Period = TimerPeriod;
+    setuptimer.TIM_Period = TimerPeriod - 1;
     setuptimer.TIM_ClockDivision = 0;
     setuptimer.TIM_RepetitionCounter = 0;
 
     TIM_TimeBaseInit(TIM3, &setuptimer);
 
-    uint16_t Channel1Pulse = (uint16_t) (((uint32_t) 12.5 * (TimerPeriod - 1 )) / 100) - 1;     //DUTY CYCLE OF 25 USED FOR ARMING ESC
+    uint16_t Channel1Pulse = (uint16_t) (12.5 * TimerPeriod / 100);     //DUTY CYCLE OF 25 USED FOR ARMING ESC
 
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
@@ -157,6 +177,8 @@ static void tim_init()
 
 static void i2c_config()
 {
+    i2cUnstick();
+
    GPIO_InitTypeDef init;
    init.GPIO_Pin   = GPIO_Pin_6|GPIO_Pin_7;
    init.GPIO_Mode  =  GPIO_Mode_AF;
@@ -178,13 +200,21 @@ static void i2c_config()
    i2c_init.I2C_DigitalFilter = 0x00;
    i2c_init.I2C_AnalogFilter = I2C_AnalogFilter_Enable;
    i2c_init.I2C_Timing = 0x00C0216C;                        //400kHz Fast Mode 64MHz
-
+   //i2c_init.I2C_Timing = 0x00C0125D;
    I2C_SlaveAddressConfig(I2C1, 0x68);
 
    I2C_Init(I2C1, &i2c_init);
    I2C_Cmd(I2C1, ENABLE);
 
+   int add = check_imu_connect();
+
+   if(add == 0x71)
    imu_config();
+
+   else
+    SCB->AIRCR = 0x05fa0004;        //SYSTEM RESET   https://os.mbed.com/questions/67953/How-can-I-RESET-this-from-my-program/
+                                    //https://www.st.com/content/ccc/resource/technical/document/programming_manual/6c/3a/cb/e7/e4/ea/44/9b/DM00046982.pdf/files/DM00046982.pdf/jcr:content/translations/en.DM00046982.pdf
+
 
 }
 
@@ -230,6 +260,12 @@ static void interrupt_config()
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
+  NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_Init(&NVIC_InitStructure);
+
 }
 
 static void dma_init()
@@ -253,10 +289,8 @@ static void dma_init()
     DMA_InitStruct.DMA_M2M = DMA_M2M_Disable;
     DMA_Init(DMA1_Channel6, &DMA_InitStruct);
 
-    USART_DMACmd(USART2, USART_DMAReq_Rx, ENABLE);
-
     DMA_ITConfig(DMA1_Channel6, DMA_IT_TC, ENABLE);
-    DMA_Cmd(DMA1_Channel6, ENABLE);
+
 
 //////////////////////////////////////////////////////////////////////////
 //I2C1 DMA1_Channel7

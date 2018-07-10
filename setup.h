@@ -5,6 +5,7 @@
 #include "stm32f30x.h"
 #include "ibus.h"
 #include "motor.h"
+#include "led.h"
 
 
 void init_periph();

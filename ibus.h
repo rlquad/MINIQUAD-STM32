@@ -14,6 +14,7 @@ extern int rcvalue[6];
 
 extern int rc_status;
 
+void USART2_IRQHandler(void);
 void DMA1_Channel6_IRQHandler(void);
 void read_recv();
 

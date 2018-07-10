@@ -5,14 +5,15 @@
 #include "angle.h"
 #include "ibus.h"
 #include "defines.h"
+#include "uart.h"
 
-#define Kp_roll  1
-#define Kd_roll  1
-#define Ki_roll  1
+#define Kp_roll  4
+#define Kd_roll  200.0
+#define Ki_roll  0
 
-#define Kp_pitch 1
-#define Kd_pitch 1
-#define Ki_pitch 1
+#define Kp_pitch 4
+#define Kd_pitch 200.0
+#define Ki_pitch 0
 
 #define Kp_yaw   1
 #define Kd_yaw   1
@@ -23,6 +24,7 @@
 #define yaw_des   0
 
 float* pid_set();
+void Kd_calc();
 
 #endif
 
