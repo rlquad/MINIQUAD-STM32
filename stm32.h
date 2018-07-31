@@ -8,6 +8,7 @@
 #include "setup.h"
 #include "angle.h"
 #include "led.h"
+#include "q_angle.h"
 
 #endif
 

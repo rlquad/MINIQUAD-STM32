@@ -8,6 +8,6 @@
 #include "imu.h"
 
 void OutString(char *);
-void print_ang(int,double,double);
+void print_ang(double,double,double,double,double,double,double,double);
 
 #endif

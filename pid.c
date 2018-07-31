@@ -6,7 +6,7 @@ float Kd_pitch = 0;
 float Kp_roll = 4;
 float Kp_pitch = 4;
 */
-
+int yaw_des = 0;
 float last_error[3];
 
 float* pid_set()
@@ -23,7 +23,6 @@ float* pid_set()
     pid_correct[PITCH] = Kp_pitch*(error[PITCH]) + Kd_pitch*(error[PITCH] - last_error[PITCH]);
     pid_correct[YAW]   = Kp_yaw  *(error[YAW])   + Kd_yaw  *(error[YAW] - last_error[YAW]);
 
-   // print_ang(2,Kd_roll*(error[ROLL] - last_error[ROLL]),Kp_roll *(error[ROLL]));
 
     last_error[ROLL]  = error[ROLL];
     last_error[PITCH] = error[PITCH];
